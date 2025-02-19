@@ -73,8 +73,9 @@ export default function CameraPage() {
       const context = canvas.getContext('2d');
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
       
+      // Get complete data URL for preview
       const dataUrl = canvas.toDataURL('image/jpeg');
-      setCapturedImage(dataUrl);
+      setCapturedImage(dataUrl); // Store complete data URL
       stopCamera();
     } catch (error) {
       console.error('Error taking picture:', error);
@@ -94,8 +95,9 @@ export default function CameraPage() {
       const token = await AsyncStorage.getItem('userToken');
 
       // Convert image to base64
-      const base64Image = capturedImage.uri;
-      
+      // In handleSubmit function when sending to backend
+      const base64Image = capturedImage.split('base64,')[1] || capturedImage;
+
       const response = await fetch(endpoints.analyzeNutrition, {
         method: 'POST',
         headers: {
@@ -108,9 +110,10 @@ export default function CameraPage() {
       });
 
       const data = await response.json();
+      console.log('Response:', data); // For debugging
 
       if (data.status === 'error') {
-        setIsProcessing(false); // Stop processing state
+        setIsProcessing(false);
         
         // Handle specific error cases
         if (data.message === 'No nutrition label detected') {
@@ -164,8 +167,9 @@ export default function CameraPage() {
       <View style={styles.container}>
         <StatusBar barStyle="light-content" />
         <Image
-          source={{ uri: capturedImage }}
+          source={{ uri: capturedImage }} // Now using complete data URL
           style={styles.previewImage}
+          resizeMode="contain"
         />
         {isProcessing ? (
           <View style={styles.processingContainer}>
