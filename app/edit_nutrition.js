@@ -31,6 +31,8 @@ export default function EditNutrition() {
   const [servingInput, setServingInput] = useState('');
   const [hasNullPerServe, setHasNullPerServe] = useState(false);
   const [hasNullPer100g, setHasNullPer100g] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [servingError, setServingError] = useState('');
 
   // Add function to check for null values
   const checkNullValues = (nutrients) => {
@@ -61,13 +63,22 @@ export default function EditNutrition() {
 
   const handleConfirm = async () => {
     try {
-      const token = await AsyncStorage.getItem('userToken');
-      
+      // Reset error state
+      setServingError('');
+
       // Validate serving size input
-      if (!servingInput || isNaN(servingInput) || parseFloat(servingInput) <= 0) {
-        Alert.alert('Error', 'Please enter a valid serving size');
+      if (!servingInput || servingInput.trim() === '') {
+        setServingError('Please enter your serving size');
         return;
       }
+  
+      if (isNaN(servingInput) || parseFloat(servingInput) <= 0) {
+        setServingError('Please enter a valid serving size');
+        return;
+      }
+  
+      setIsProcessing(true); // Start loading state
+      const token = await AsyncStorage.getItem('userToken');
   
       const response = await fetch(endpoints.analyzeScannedFood, {
         method: 'POST',
@@ -88,15 +99,14 @@ export default function EditNutrition() {
         throw new Error(data.error || 'Failed to analyze food');
       }
   
-      // Store the scanned food data
       await AsyncStorage.setItem('scannedFoodData', JSON.stringify(data));
-  
-      // Navigate to recommendations page
       router.push('/recommendation');
   
     } catch (error) {
       console.error('Error confirming nutrition data:', error);
       Alert.alert('Error', 'Failed to process nutrition data');
+    } finally {
+      setIsProcessing(false); // End loading state
     }
   };
 
@@ -175,9 +185,16 @@ export default function EditNutrition() {
           <Text style={styles.label}>Enter your serving size</Text>
           <View style={styles.servingContainer}>
             <TextInput
-              style={[styles.input, styles.servingInput]}
+              style={[
+                styles.input, 
+                styles.servingInput,
+                servingError ? styles.inputError : null
+              ]}
               value={servingInput}
-              onChangeText={setServingInput}
+              onChangeText={(text) => {
+                setServingInput(text);
+                setServingError(''); // Clear error when user types
+              }}
               keyboardType="numeric"
               placeholder="Enter amount"
             />
@@ -201,10 +218,22 @@ export default function EditNutrition() {
               </Picker>
             </View>
           </View>
+          {servingError ? (
+            <Text style={styles.errorText}>{servingError}</Text>
+          ) : null}
         </View>
 
-        <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-          <Text style={styles.confirmButtonText}>Confirm</Text>
+        <TouchableOpacity 
+          style={[
+            styles.confirmButton,
+            isProcessing && styles.confirmButtonDisabled
+          ]} 
+          onPress={handleConfirm}
+          disabled={isProcessing}
+        >
+          <Text style={styles.confirmButtonText}>
+            {isProcessing ? 'Processing...' : 'Confirm'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </>
@@ -318,5 +347,18 @@ const styles = StyleSheet.create({
   nullValue: {
     borderColor: colors.error,
     backgroundColor: colors.background,
-  }
+  },
+  confirmButtonDisabled: {
+    backgroundColor: colors.border,
+    opacity: 0.7,
+  },
+  inputError: {
+    borderColor: colors.error,
+    borderWidth: 1,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 14,
+    marginTop: 4,
+  },
 });

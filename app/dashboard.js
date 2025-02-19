@@ -185,20 +185,30 @@ export default function DashboardPage() {
       const data = await response.json();
       console.log('Received response:', data);
 
+      if (data.status === 'error') {
+        // Handle specific error cases
+        if (data.message === 'No nutrition label detected') {
+          Alert.alert('Error', 'Could not detect Nutritional Label');
+        } else if (data.message.includes('Gemini')) { // Check for Gemini API errors
+          Alert.alert('Error', 'Couldn\'t extract data');
+        } else {
+          Alert.alert('Error', data.message || 'Failed to process image');
+        }
+        setIsUploadModalVisible(false); // Close modal on error
+        return;
+      }
+
       if (data.status === 'success') {
-        setIsUploadModalVisible(false); // Close modal only on success
+        setIsUploadModalVisible(false);
         router.push({
           pathname: '/edit_nutrition',
           params: { nutritionData: JSON.stringify(data.nutrition_data) }
         });
-      } else {
-        // Don't close modal on error
-        Alert.alert('Error', data.message || 'Failed to process image');
       }
     } catch (error) {
       console.error('Error uploading image:', error);
       Alert.alert('Error', 'Failed to process image');
-      // Don't close modal on error
+      setIsUploadModalVisible(false);
     }
   };
 

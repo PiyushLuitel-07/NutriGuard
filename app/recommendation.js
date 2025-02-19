@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
-import { Stack } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { Stack, router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../constants/theme';
 import { endpoints } from '../config/api';
@@ -153,6 +153,14 @@ export default function RecommendationPage() {
                 </Text>
               </View>
             </View>
+
+            {/* Add the back button */}
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => router.push('/dashboard')}
+            >
+              <Text style={styles.backButtonText}>Go Back to Dashboard</Text>
+            </TouchableOpacity>
           </>
         )}
       </ScrollView>
@@ -226,5 +234,18 @@ const styles = StyleSheet.create({
     color: colors.error,
     textAlign: 'center',
     marginTop: 20,
+  },
+  backButton: {
+    backgroundColor: colors.primary,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 30,
+  },
+  backButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

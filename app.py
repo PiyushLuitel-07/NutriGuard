@@ -18,6 +18,9 @@ import logging
 import tempfile
 import traceback
 
+# Add this import at the top
+import re
+
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -901,30 +904,33 @@ def analyze_nutrition():
             "role": "user",
             "parts": [
                 uploaded_image,
-                ("I have an image of a food product containing a nutrition label. "
-                    "The goal is to extract and structure the nutritional information presented on this label into a JSON format. "
-                    "The output should consist of JSON only, starting with '{' and ending with '}', with no additional text or comments. "
-                    "Here is the structure of the JSON:\n\n"
-                    "{\n"
+                ("I have an image of a food product containing a nutrition label. Your task is to extract and organize the nutritional information from this label into a JSON object that exactly follows the structure below. Do not include any extra keys, text, markdown formatting, or explanations—only output the JSON object starting with '{' and ending with '}'."  
+                  "{\n"
                     "  \"serving_size\": \"\",\n"
                     "  \"nutrients\": {\n"
                     "    \"Energy\": {\"unit\": \"\", \"per_serve\": 0, \"per_100g\": 0},\n"
                     "    \"Protein\": {\"unit\": \"\", \"per_serve\": 0, \"per_100g\": 0},\n"
                     "    ... (other nutrients)\n"
-                    "  }\n"
-                    "}\n\n"
-                    "Don't begin with ``` json just give the data as response."
+                    "  }\n"  
+                  "Important Guidelines:"  
+                  "1. Exact Keys Only: Only use the nutrient names provided (Energy, Carbohydrate, Protein, Total Fat, Sodium, Potassium, Magnesium, Calcium, Fiber). If the label uses alternative names (for example, 'Total Carbohydrates'), map them to the specified key (e.g., 'Carbohydrate')."  
+                  "2. Output Format: Output only the JSON object without any additional text or markdown formatting (for example, do not wrap your answer in triple backticks or any language tags)."  
+                  "3. Consistency: Ensure that each nutrient follows the structure with keys 'unit', 'per_serve', and 'per_100g'."  
+                  ""  
+                  "Please extract the nutritional information accordingly and return only the JSON object as described."
                 )
             ],
         }])
 
         response = chat_session.send_message("INSERT_INPUT_HERE")
 
-        # Add debug logs for Gemini response
-        logger.debug("Gemini Response:")
-        logger.debug(response.text)
-        
-        nutrition_data = json.loads(response.text)
+        # Clean up the response text using regex
+        cleaned_text = re.sub(r'```json\s*|\s*```', '', response.text)
+        print("\n=== CLEANED GEMINI RESPONSE ===")
+        print(cleaned_text)  # Print the cleaned response
+
+        # Parse the cleaned JSON
+        nutrition_data = json.loads(cleaned_text)
         logger.debug("Parsed Nutrition Data:")
         logger.debug(json.dumps(nutrition_data, indent=2))
 

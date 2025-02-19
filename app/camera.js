@@ -1,27 +1,157 @@
 import { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, StatusBar } from 'react-native';
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import { View, Text, TouchableOpacity, StyleSheet, Image, StatusBar, ActivityIndicator, Alert } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { colors } from '../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { endpoints } from '../config/api';
+
+// Check if we're running in a web browser
+const isWeb = typeof document !== 'undefined';
 
 export default function CameraPage() {
-  const [permission, requestPermission] = useCameraPermissions();
-  const [facing, setFacing] = useState(CameraType.back);
+  const [hasPermission, setHasPermission] = useState(null);
+  const [stream, setStream] = useState(null);
   const [capturedImage, setCapturedImage] = useState(null);
-  const [camera, setCamera] = useState(null);
+  const [facingMode, setFacingMode] = useState('environment');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
-  if (!permission) {
-    return <View />;
+  useEffect(() => {
+    if (isWeb) {
+      requestCameraPermission();
+    } else {
+      setHasPermission(false);
+    }
+  }, []);
+
+  const requestCameraPermission = async () => {
+    try {
+      const result = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode,
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        },
+        audio: false,
+      });
+      setStream(result);
+      setHasPermission(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = result;
+      }
+    } catch (err) {
+      console.error("Error accessing camera:", err);
+      setHasPermission(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, [stream]);
+
+  const takePicture = async () => {
+    try {
+      if (!videoRef.current || !canvasRef.current) return;
+
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      const context = canvas.getContext('2d');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      const dataUrl = canvas.toDataURL('image/jpeg');
+      setCapturedImage(dataUrl);
+      stopCamera();
+    } catch (error) {
+      console.error('Error taking picture:', error);
+    }
+  };
+
+  const retakePicture = () => {
+    setCapturedImage(null);
+    requestCameraPermission();
+  };
+
+  const handleSubmit = async () => {
+    if (!capturedImage) return;
+
+    try {
+      setIsProcessing(true);
+      const token = await AsyncStorage.getItem('userToken');
+
+      // Convert image to base64
+      const base64Image = capturedImage.uri;
+      
+      const response = await fetch(endpoints.analyzeNutrition, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: base64Image
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.status === 'error') {
+        setIsProcessing(false); // Stop processing state
+        
+        // Handle specific error cases
+        if (data.message === 'No nutrition label detected') {
+          Alert.alert('Error', 'Could not detect Nutritional Label');
+        } else if (data.message.includes('Gemini')) {
+          Alert.alert('Error', 'Couldn\'t extract data');
+        } else {
+          Alert.alert('Error', data.message || 'Failed to process image');
+        }
+        return;
+      }
+
+      if (data.status === 'success') {
+        router.push({
+          pathname: '/edit_nutrition',
+          params: { nutritionData: JSON.stringify(data.nutrition_data) }
+        });
+      }
+    } catch (error) {
+      console.error('Error submitting image:', error);
+      Alert.alert('Error', 'Failed to process image');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  if (hasPermission === null) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.text}>Requesting camera permission...</Text>
+      </View>
+    );
   }
 
-  if (!permission.granted) {
+  if (hasPermission === false) {
     return (
       <View style={styles.container}>
         <Text style={styles.text}>Camera permission is required</Text>
         <TouchableOpacity 
           style={styles.button}
-          onPress={requestPermission}
+          onPress={requestCameraPermission}
         >
           <Text style={styles.buttonText}>Grant Permission</Text>
         </TouchableOpacity>
@@ -29,50 +159,39 @@ export default function CameraPage() {
     );
   }
 
-  const takePicture = async () => {
-    if (camera) {
-      try {
-        const photo = await camera.takePictureAsync();
-        setCapturedImage(photo);
-        console.log('Captured photo URI:', photo.uri);
-      } catch (error) {
-        console.error('Error taking picture:', error);
-      }
-    }
-  };
-
-  const retakePicture = () => {
-    setCapturedImage(null);
-  };
-
   if (capturedImage) {
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" />
         <Image
-          source={{ uri: capturedImage.uri }}
+          source={{ uri: capturedImage }}
           style={styles.previewImage}
         />
-        <View style={styles.previewButtons}>
-          <TouchableOpacity 
-            style={[styles.previewButton, styles.retakeButton]}
-            onPress={retakePicture}
-          >
-            <Ionicons name="camera-reverse" size={24} color={colors.white} />
-            <Text style={styles.previewButtonText}>Retake</Text>
-          </TouchableOpacity>
+        {isProcessing ? (
+          <View style={styles.processingContainer}>
+            <ActivityIndicator size="large" color={colors.white} />
+            <Text style={styles.processingText}>Processing image...</Text>
+          </View>
+        ) : (
+          <View style={styles.previewButtons}>
+            <TouchableOpacity 
+              style={[styles.previewButton, styles.retakeButton]}
+              onPress={retakePicture}
+            >
+              <Ionicons name="camera-reverse" size={24} color={colors.white} />
+              <Text style={styles.previewButtonText}>Retake</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.previewButton, styles.submitButton]}
-            onPress={() => {
-              console.log('Submit button pressed');
-              // Submit logic will be implemented later
-            }}
-          >
-            <Ionicons name="checkmark-circle" size={24} color={colors.white} />
-            <Text style={styles.previewButtonText}>Submit</Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity 
+              style={[styles.previewButton, styles.submitButton]}
+              onPress={handleSubmit}
+              disabled={isProcessing}
+            >
+              <Ionicons name="checkmark-circle" size={24} color={colors.white} />
+              <Text style={styles.previewButtonText}>Submit</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     );
   }
@@ -80,38 +199,43 @@ export default function CameraPage() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <CameraView
-        ref={(ref) => setCamera(ref)}
+      <video
+        ref={videoRef}
         style={styles.camera}
-        facing={facing}
-      >
-        <View style={styles.controls}>
-          <TouchableOpacity
-            style={styles.controlButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="close" size={24} color="white" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={styles.controlButton}
-            onPress={() => setFacing(current => 
-              current === CameraType.back ? CameraType.front : CameraType.back
-            )}
-          >
-            <Ionicons name="camera-reverse" size={24} color="white" />
-          </TouchableOpacity>
-        </View>
+        autoPlay
+        playsInline
+        muted
+      />
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+      
+      <View style={styles.controls}>
+        <TouchableOpacity
+          style={styles.controlButton}
+          onPress={() => router.replace('/dashboard')}
+        >
+          <Ionicons name="close" size={24} color="white" />
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={styles.controlButton}
+          onPress={() => {
+            setFacingMode(current => 
+              current === 'environment' ? 'user' : 'environment'
+            );
+            stopCamera();
+            requestCameraPermission();
+          }}
+        >
+          <Ionicons name="camera-reverse" size={24} color="white" />
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.shutterContainer}>
-          <TouchableOpacity 
-            style={styles.shutterButton}
-            onPress={takePicture}
-          >
-            <View style={styles.shutterInner} />
-          </TouchableOpacity>
-        </View>
-      </CameraView>
+      <TouchableOpacity 
+        style={styles.captureButton}
+        onPress={takePicture}
+      >
+        <View style={styles.captureButtonInner} />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -121,27 +245,50 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'black',
   },
+  text: {
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 20,
+  },
   camera: {
     flex: 1,
     width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  button: {
+    backgroundColor: colors.primary,
+    padding: 15,
+    borderRadius: 10,
+    marginTop: 20,
+    alignSelf: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
   },
   controls: {
+    position: 'absolute',
+    top: 20,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 20,
-    paddingTop: 40,
   },
   controlButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 10,
-    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  shutterContainer: {
+  captureButton: {
     position: 'absolute',
     bottom: 40,
     alignSelf: 'center',
-  },
-  shutterButton: {
     width: 80,
     height: 80,
     borderRadius: 40,
@@ -149,62 +296,53 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  shutterInner: {
+  captureButtonInner: {
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: colors.white,
-    borderWidth: 2,
-    borderColor: colors.primary,
+    backgroundColor: 'white',
   },
   previewImage: {
     flex: 1,
     width: '100%',
+    height: '100%',
+    objectFit: 'contain',
   },
   previewButtons: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 40,
     left: 0,
     right: 0,
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'space-evenly',
   },
   previewButton: {
+    padding: 15,
+    borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 25,
     gap: 8,
   },
+  previewButtonText: {
+    color: 'white',
+    fontSize: 16,
+  },
   retakeButton: {
-    backgroundColor: colors.error,
+    backgroundColor: 'rgba(255, 59, 48, 0.8)',
   },
   submitButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: 'rgba(52, 199, 89, 0.8)',
   },
-  previewButtonText: {
+  processingContainer: {
+    position: 'absolute',
+    bottom: 40,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  processingText: {
     color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
-  },
-  text: {
-    color: colors.text,
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  button: {
-    backgroundColor: colors.primary,
-    padding: 15,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
+    marginTop: 10,
   },
 });
