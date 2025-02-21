@@ -40,7 +40,7 @@ print("Nutritionix APP_ID:", os.getenv('NUTRITIONIX_APP_ID'))
 print("Nutritionix API_KEY:", os.getenv('NUTRITIONIX_API_KEY'))
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Initialize models and configurations
 genai.configure(api_key=os.getenv('GENAI_API_KEY'))
@@ -56,8 +56,8 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Load models
 yolo_model = YOLO('./assets/models/yolo_model.pt')
-rf_model = joblib.load('./assets/models/random_forest_glycemic_index_model.joblib')
-scaler = joblib.load('./assets/models/scaler_glycemic_index.joblib')
+rf_model = joblib.load('./assets/models/random_forest_model.joblib')
+scaler = joblib.load('./assets/models/scaler.joblib')
 
 # Configure Gemini
 generation_config = {

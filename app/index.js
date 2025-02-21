@@ -1,12 +1,17 @@
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable, Image, Text } from 'react-native';
 import { router } from 'expo-router';
 import { colors } from '../constants/theme';
 
 export default function Index() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Nutri-Guard</Text>
-      <Text style={styles.subtitle}>Your Personal Nutrition Assistant</Text>
+      <View style={styles.logoContainer}>
+        <Image 
+          source={require('../assets/logo/default.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+      </View>
       
       <View style={styles.buttonContainer}>
         <Pressable
@@ -39,21 +44,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    justifyContent: 'center',
     alignItems: 'center',
+    paddingTop: 40,
     padding: 20,
   },
-  title: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: colors.primary,
-    marginBottom: 10,
+  logoContainer: {
+    width: 320,
+    height: 320,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 5,
   },
-  subtitle: {
-    fontSize: 18,
-    color: colors.text,
-    marginBottom: 40,
-    textAlign: 'center',
+  logo: {
+    width: '100%',
+    height: '100%',
   },
   buttonContainer: {
     width: '100%',

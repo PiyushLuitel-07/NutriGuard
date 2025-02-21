@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../constants/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 
 export default function UploadModal({ visible, onClose, onImageUpload }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const resetState = () => {
     setIsProcessing(false);
@@ -21,7 +24,18 @@ export default function UploadModal({ visible, onClose, onImageUpload }) {
     if (!visible) {
       resetState();
     }
+    checkAuth();
   }, [visible]);
+
+  const checkAuth = async () => {
+    const token = await AsyncStorage.getItem('userToken');
+    if (!token) {
+      onClose();
+      router.replace('/login');
+      return;
+    }
+    setIsAuthenticated(true);
+  };
 
   const pickImage = async () => {
     try {
@@ -41,6 +55,10 @@ export default function UploadModal({ visible, onClose, onImageUpload }) {
       console.error('Error picking image:', error);
     }
   };
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <Modal

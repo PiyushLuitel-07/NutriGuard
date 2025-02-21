@@ -5,8 +5,17 @@ import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../constants/theme';
 import { endpoints } from '../config/api';
+import AuthCheck from '../components/AuthCheck';
 
 export default function EditNutrition() {
+  return (
+    <AuthCheck>
+      <EditNutritionContent />
+    </AuthCheck>
+  );
+}
+
+function EditNutritionContent() {
   // Update how we get params
   const { nutritionData: nutritionDataParam } = useLocalSearchParams();
   const [servingUnit, setServingUnit] = useState('g');
@@ -307,16 +316,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    justifyContent: 'space-between', // Added to better distribute space
   },
   servingInput: {
-    flex: 1,
+    flex: 0.3, // Reduced from 1 to make it smaller
   },
   pickerContainer: {
     backgroundColor: colors.white,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.border,
-    width: 120,
+    flex: 0.7, // Increased from fixed width to make it bigger
   },
   picker: {
     height: 50,

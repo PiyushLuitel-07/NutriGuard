@@ -5,6 +5,24 @@ import { colors } from '../constants/theme';
 import { endpoints } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Add this helper function
+const clearPreviousUserCache = async () => {
+  try {
+    // Get all keys from AsyncStorage
+    const keys = await AsyncStorage.getAllKeys();
+    
+    // Filter dashboard data keys
+    const dashboardCacheKeys = keys.filter(key => key.startsWith('dashboardData_'));
+    
+    // Remove all dashboard cache entries
+    if (dashboardCacheKeys.length > 0) {
+      await AsyncStorage.multiRemove(dashboardCacheKeys);
+    }
+  } catch (error) {
+    console.error('Error clearing previous user cache:', error);
+  }
+};
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -55,7 +73,12 @@ export default function LoginPage() {
       }
 
       if (data.token) {
+        // Clear any existing cache before setting new user data
+        await clearPreviousUserCache();
+        
+        // Set new user data
         await AsyncStorage.setItem('userToken', data.token);
+        await AsyncStorage.setItem('userId', data.user.id);
         
         if (data.is_first_login) {
           router.replace('/user-details');

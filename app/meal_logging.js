@@ -304,6 +304,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   picker: {
+    flex: 0.7, // Add this to give more space to the picker
     height: 50,
     fontFamily: 'System',  // or your app's default font
     fontSize: 16,
@@ -328,9 +329,10 @@ const styles = StyleSheet.create({
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between', // Add this to better distribute space
   },
   quantityInput: {
-    flex: 1,
+    flex: 0.3, // Reduce this from 1 to make it smaller
     marginRight: 10,
   },
   unitPicker: {

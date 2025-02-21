@@ -8,6 +8,11 @@ import AuthCheck from '../components/AuthCheck';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons'; // Added MaterialIcons import
 import UploadModal from '../components/UploadModal';
 
+// Add these constants at the top of the file
+const CACHE_KEYS = {
+  DASHBOARD_DATA: 'dashboardData_'
+};
+
 export default function DashboardPage() {
   const [todayMeals, setTodayMeals] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,6 +29,55 @@ export default function DashboardPage() {
     return Date.now() - lastFetchTime > CACHE_DURATION;
   };
 
+  // Add this function to handle caching
+  const cacheDashboardData = async (meals, nutrition, glycemic) => {
+    try {
+      const userId = await AsyncStorage.getItem('userId');
+      const cacheKey = `${CACHE_KEYS.DASHBOARD_DATA}${userId}`;
+      const today = new Date().toDateString();
+      
+      const dataToCache = {
+        meals,
+        nutrition,
+        glycemic,
+        timestamp: Date.now(),
+        date: today
+      };
+
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(dataToCache));
+    } catch (error) {
+      console.error('Error caching dashboard data:', error);
+    }
+  };
+
+  // Add this function to load cached data
+  const loadCachedData = async () => {
+    try {
+      const userId = await AsyncStorage.getItem('userId');
+      const cacheKey = `${CACHE_KEYS.DASHBOARD_DATA}${userId}`;
+      const cachedData = await AsyncStorage.getItem(cacheKey);
+
+      if (cachedData) {
+        const parsed = JSON.parse(cachedData);
+        const today = new Date().toDateString();
+
+        // Only use cache if it's from today
+        if (parsed.date === today) {
+          setTodayMeals(parsed.meals);
+          setNutritionData(parsed.nutrition);
+          setGlycemicData(parsed.glycemic);
+          setIsLoading(false);
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Error loading cached data:', error);
+      return false;
+    }
+  };
+
+  // Modify the fetchData function
   const fetchData = async (forceFetch = false) => {
     try {
       const token = await AsyncStorage.getItem('userToken');
@@ -32,35 +86,82 @@ export default function DashboardPage() {
         return;
       }
 
-      if (!forceFetch && !shouldFetchFreshData()) {
-        console.log('Using cached data');
-        return;
+      if (!forceFetch) {
+        const hasCachedData = await loadCachedData();
+        if (hasCachedData) {
+          return;
+        }
       }
 
       setIsLoading(true);
       setError(null);
 
-      // Fetch data sequentially to ensure proper order and error handling
-      await fetchTodayMeals(token);
-      await fetchNutritionData(token);
-      await fetchGlycemicData(token);
+      // First fetch meals and wait for the result
+      const meals = await fetchTodayMeals(token);
+      
+      // Only fetch nutrition and glycemic data if there are meals
+      if (meals && meals.length > 0) {
+        // Fetch both nutrition and glycemic data in parallel
+        const [nutritionResponse, glycemicResponse] = await Promise.all([
+          fetch(endpoints.getTodayMealsNutrition, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }),
+          fetch(endpoints.getTodayGlycemic, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          })
+        ]);
 
-      // Update last fetch time only if all fetches succeed
+        const nutritionData = await nutritionResponse.json();
+        const glycemicData = await glycemicResponse.json();
+
+        if (nutritionData && nutritionData.nutrition) {
+          setNutritionData(nutritionData.nutrition);
+        }
+
+        if (glycemicData && glycemicData.glycemic_index !== undefined) {
+          setGlycemicData({
+            glycemic_index: glycemicData.glycemic_index,
+            glycemic_load: glycemicData.glycemic_load
+          });
+        }
+
+        // Cache the fetched data
+        await cacheDashboardData(meals, nutritionData.nutrition, {
+          glycemic_index: glycemicData.glycemic_index,
+          glycemic_load: glycemicData.glycemic_load
+        });
+      } else {
+        setNutritionData(null);
+        setGlycemicData(null);
+      }
+
       setLastFetchTime(Date.now());
 
     } catch (error) {
       console.error('Error in data fetching:', error);
-      setError('Failed to fetch data');
+      if (error.message !== 'Failed to fetch nutritional information') {
+        setError('Failed to fetch data');
+      }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
   };
 
+  // Modify the useEffect
   useEffect(() => {
     const initializeData = async () => {
       try {
-        await fetchData(true); // Force initial fetch
+        const hasCachedData = await loadCachedData();
+        if (!hasCachedData) {
+          await fetchData(true);
+        }
       } catch (error) {
         console.error('Error in initial data load:', error);
         setError('Failed to load data');
@@ -84,28 +185,33 @@ export default function DashboardPage() {
 
       if (!response.ok) {
         if (response.status === 404) {
-          // No meals found for today
           setTodayMeals([]);
-          setError(null);
+          return [];
         } else {
           throw new Error(data.error || 'Failed to fetch meals');
         }
       } else if (data && data.meals && Array.isArray(data.meals)) {
         setTodayMeals(data.meals);
-        setError(null);
+        return data.meals;
       } else {
         setTodayMeals([]);
-        setError(null);
+        return [];
       }
     } catch (error) {
       console.error('Error fetching meals:', error);
       setTodayMeals([]);
-      setError('Failed to fetch meals');
+      throw error;
     }
   };
 
   const fetchNutritionData = async (token) => {
     try {
+      // If there are no meals, return early without making the API call
+      if (todayMeals.length === 0) {
+        setNutritionData(null);
+        return;
+      }
+
       const response = await fetch(endpoints.getTodayMealsNutrition, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -114,9 +220,13 @@ export default function DashboardPage() {
       });
 
       const data = await response.json();
-      console.log('Nutrition data response:', data);
 
       if (!response.ok) {
+        if (response.status === 404) {
+          // No nutrition data found, but this is not an error state
+          setNutritionData(null);
+          return;
+        }
         throw new Error(data.error || 'Failed to fetch nutrition data');
       }
 
@@ -127,7 +237,8 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error('Error fetching nutrition data:', error);
-      throw error; // Let the parent handle the error
+      // Don't throw the error, just set nutrition data to null
+      setNutritionData(null);
     }
   };
 
@@ -210,6 +321,15 @@ export default function DashboardPage() {
       Alert.alert('Error', 'Failed to process image');
       setIsUploadModalVisible(false);
     }
+  };
+
+  const handleUploadPress = async () => {
+    const token = await AsyncStorage.getItem('userToken');
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+    setIsUploadModalVisible(true);
   };
 
   const onRefresh = async () => {
@@ -391,7 +511,7 @@ export default function DashboardPage() {
             
             <TouchableOpacity 
               style={styles.footerButton}
-              onPress={() => setIsUploadModalVisible(true)}
+              onPress={handleUploadPress}  // Changed from directly setting state
             >
               <MaterialIcons name="file-upload" size={24} color={colors.primary} />
               <Text style={styles.footerButtonText}>Upload</Text>
@@ -407,11 +527,13 @@ export default function DashboardPage() {
           </View>
         </View>
 
-        <UploadModal
-          visible={isUploadModalVisible}
-          onClose={() => setIsUploadModalVisible(false)}
-          onImageUpload={handleImageUpload}
-        />
+        {isUploadModalVisible && (  // Add condition here
+          <UploadModal
+            visible={isUploadModalVisible}
+            onClose={() => setIsUploadModalVisible(false)}
+            onImageUpload={handleImageUpload}
+          />
+        )}
       </>
     </AuthCheck>
   );

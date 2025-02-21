@@ -4,6 +4,7 @@ import { Stack, router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../constants/theme';
 import { endpoints } from '../config/api';
+import AuthCheck from '../components/AuthCheck';
 
 export default function RecommendationPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -74,7 +75,7 @@ export default function RecommendationPage() {
   };
 
   return (
-    <>
+    <AuthCheck>
       <Stack.Screen
         options={{
           title: "Recommendations",
@@ -164,7 +165,7 @@ export default function RecommendationPage() {
           </>
         )}
       </ScrollView>
-    </>
+    </AuthCheck>
   );
 }
 

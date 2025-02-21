@@ -8,6 +8,11 @@ import { Ionicons } from '@expo/vector-icons';
 import AuthCheck from '../components/AuthCheck';
 import EditHealthModal from '../components/EditHealthModal';
 
+// Add this constant at the top of the file, after the imports
+const CACHE_KEYS = {
+  DASHBOARD_DATA: 'dashboardData_'
+};
+
 export default function UserProfilePage() {
   const [userDetails, setUserDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,23 +76,38 @@ export default function UserProfilePage() {
 
   const handleLogout = async () => {
     try {
+      const userId = await AsyncStorage.getItem('userId');
       const token = await AsyncStorage.getItem('userToken');
-      const response = await fetch(endpoints.logout, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      
+      if (userId) {
+        // Clear dashboard cache
+        const dashboardCacheKey = `${CACHE_KEYS.DASHBOARD_DATA}${userId}`;
+        await AsyncStorage.removeItem(dashboardCacheKey);
+      }
+      
+      // Perform logout
+      if (token) {
+        try {
+          await fetch(endpoints.logout, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+        } catch (logoutError) {
+          console.error('Error during logout request:', logoutError);
+        }
+      }
 
-      // Clear token regardless of response
-      await AsyncStorage.removeItem('userToken');
-      router.replace('/');
+      // Clear user data regardless of logout request success
+      await AsyncStorage.multiRemove(['userToken', 'userId']);
+      router.replace('/login');
     } catch (error) {
       console.error('Logout error:', error);
-      // Clear token and redirect even if there's an error
-      await AsyncStorage.removeItem('userToken');
-      router.replace('/');
+      // Ensure user is logged out even if there's an error
+      await AsyncStorage.multiRemove(['userToken', 'userId']);
+      router.replace('/login');
     }
   };
 

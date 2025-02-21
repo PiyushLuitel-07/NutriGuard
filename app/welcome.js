@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { colors } from '../constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { endpoints } from '../config/api';
@@ -69,38 +69,43 @@ export default function WelcomePage() {
 
   return (
     <AuthCheck>
-      <>
+      <View style={styles.container}>
         <Stack.Screen
           options={{
-            headerShown: true,
-            title: "",
-            headerStyle: {
-              backgroundColor: colors.background,
-            },
-            headerShadowVisible: false,
+            title: 'Welcome',
+            headerRight: () => <LogoutButton />,
           }}
         />
-        <View style={styles.container}>
-          {isLoading ? (
-            <Text style={styles.loadingText}>Loading...</Text>
-          ) : error ? (
-            <Text style={styles.errorText}>{error}</Text>
-          ) : (
-            <>
-              <Text style={styles.welcomeText}>Welcome,</Text>
-              <Text style={styles.nameText}>{userName}</Text>
-              <Text style={styles.subtitle}>Ready to track your nutrition?</Text>
+        <View style={styles.topSection}>
+          <View style={styles.logoContainer}>
+            <Image 
+              source={require('../assets/logo/default.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.contentSection}>
+            {isLoading ? (
+              <Text style={styles.loadingText}>Loading...</Text>
+            ) : error ? (
+              <Text style={styles.errorText}>{error}</Text>
+            ) : (
+              <>
+                <Text style={styles.welcomeText}>Welcome,</Text>
+                <Text style={styles.nameText}>{userName}</Text>
+                <Text style={styles.subtitle}>Ready to track your nutrition?</Text>
 
-              <TouchableOpacity 
-                style={styles.button} 
-                onPress={handleGoToDashboard}
-              >
-                <Text style={styles.buttonText}>Go to Dashboard</Text>
-              </TouchableOpacity>
-            </>
-          )}
+                <TouchableOpacity 
+                  style={styles.button} 
+                  onPress={handleGoToDashboard}
+                >
+                  <Text style={styles.buttonText}>Go to Dashboard</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
         </View>
-      </>
+      </View>
     </AuthCheck>
   );
 }
@@ -109,20 +114,45 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    padding: 20,
+  },
+  topSection: {
+    width: '100%',
+    alignItems: 'center',
+    paddingTop: 40,
+  },
+  logoContainer: {
+    width: 360,
+    height: 360,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 0,
+  },
+  logo: {
+    width: '100%',
+    height: '100%',
+  },
+  contentSection: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
   welcomeText: {
     fontSize: 24,
     color: colors.text,
     marginBottom: 8,
+    textAlign: 'center',
   },
   nameText: {
     fontSize: 32,
     fontWeight: 'bold',
     color: colors.primary,
-    marginBottom: 24,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 18,
+    color: colors.text,
+    marginBottom: 32,
+    textAlign: 'center',
   },
   loadingText: {
     fontSize: 16,
@@ -132,12 +162,6 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 16,
     color: colors.error,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 18,
-    color: colors.text,
-    marginBottom: 40,
     textAlign: 'center',
   },
   button: {
