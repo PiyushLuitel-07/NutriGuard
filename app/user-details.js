@@ -31,6 +31,12 @@ export default function UserDetailsPage() {
         },
       });
 
+      // If response is 404, it means user details don't exist yet (first-time user)
+      if (response.status === 404) {
+        // Silently return for first-time users
+        return;
+      }
+
       if (!response.ok) {
         throw new Error('Failed to fetch user details');
       }
@@ -48,7 +54,10 @@ export default function UserDetailsPage() {
       }
     } catch (error) {
       console.error('Error fetching user details:', error);
-      Alert.alert('Error', 'Failed to load user details');
+      // Only show alert for non-404 errors
+      if (error.message !== 'Failed to fetch user details') {
+        Alert.alert('Error', 'Failed to load user details');
+      }
     }
   };
 

@@ -1085,5 +1085,65 @@ def analyze_scanned_food():
         print("Traceback:", traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
+@app.route('/get_recommendation', methods=['POST'])
+@require_auth
+def get_recommendation():
+    try:
+        user = request.user
+        data = request.json
+
+        # Get user's health details
+        user_details = supabase.table('users')\
+            .select('blood_sugar_level, medication_details')\
+            .eq('id', user.id)\
+            .execute()
+
+        if not user_details.data:
+            return jsonify({"error": "User details not found"}), 404
+
+        user_health = user_details.data[0]
+        today_glycemic = request.json.get('today_glycemic', {})
+        scanned_glycemic = request.json.get('scanned_glycemic', {})
+
+        # Updated prompt with more concise format
+        prompt = (
+            "You are a knowledgeable doctor and nutritionist specializing in diabetes care. "
+            "Your task is to provide a concise dietary recommendation for a diabetes nutrition app. "
+            "Based on the inputs below, decide if the scanned food item is safe for consumption and give a brief explanation. "
+            "Your entire response must be limited to one or two sentences only.\n\n"
+            "Inputs:\n"
+            f"• Scanned Food Item Glycemic Index (GI): {scanned_glycemic.get('glycemic_index', 0)}\n"
+            f"• User's Recent Blood Sugar Level: {user_health['blood_sugar_level']} mg/dL\n"
+            f"• Medications: {user_health['medication_details']}\n"
+            f"• Glycemic Index of Meals Already Consumed Today: {today_glycemic.get('glycemic_index', 0)}\n\n"
+            "Instructions for Response:\n"
+            "1. If the food is safe to consume, provide one sentence that states the decision and a brief reason why. \n"
+            "2. If the food is not safe to consume, provide two sentences: the first stating the decision and the second with a brief explanation of the potential impact on blood sugar levels.\n\n"
+            "Now, please provide your answer."
+        )
+
+        # Make request to the ML model
+        response = requests.post(
+            "https://589e-34-168-31-63.ngrok-free.app/generate",
+            json={
+                "prompt": prompt,
+                "max_length": 150  # Reduced max length for more concise responses
+            }
+        )
+
+        if not response.ok:
+            return jsonify({"error": "Failed to generate recommendation"}), 500
+
+        recommendation_data = response.json()
+        
+        return jsonify({
+            "recommendation": recommendation_data.get('response', '')
+        }), 200
+
+    except Exception as e:
+        print("Error generating recommendation:", str(e))
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True)
+

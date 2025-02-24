@@ -20,13 +20,31 @@ export default function RecommendationPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load both today's glycemic data and scanned food data
-        await Promise.all([
-          fetchTodayGlycemic(),
-          loadScannedFoodData()
-        ]);
+        setIsLoading(true);
+        const todayData = await fetchTodayGlycemic();
+        console.log('Today\'s glycemic data:', todayData);
+        
+        const scannedData = await loadScannedFoodData();
+        console.log('Scanned food data:', scannedData);
+
+        if (todayData && scannedData) {
+          console.log('Both data available, getting recommendation...');
+          await getRecommendation({
+            glycemic_index: todayData.glycemic_index,
+            glycemic_load: todayData.glycemic_load
+          }, {
+            glycemic_index: scannedData.glycemic_index,
+            glycemic_load: scannedData.glycemic_load
+          });
+        } else {
+          console.log('Missing required data for recommendation');
+          setRecommendation('Please scan a food item to get a recommendation.');
+        }
       } catch (error) {
-        console.error('Error loading data:', error);
+        console.error('Error in loadData:', error);
+        setError('Failed to load recommendation data');
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -47,13 +65,12 @@ export default function RecommendationPage() {
       if (!response.ok) throw new Error(data.error || 'Failed to fetch glycemic data');
       
       setTodayGlycemic(data);
-      setError(null);
+      return data;
     } catch (error) {
       console.error('Error fetching glycemic data:', error);
       setError('Failed to fetch glycemic data');
       setTodayGlycemic(null);
-    } finally {
-      setIsLoading(false);
+      return null;
     }
   };
 
@@ -62,15 +79,57 @@ export default function RecommendationPage() {
       const savedData = await AsyncStorage.getItem('scannedFoodData');
       if (savedData) {
         const parsedData = JSON.parse(savedData);
-        setScannedGlycemic({
+        const scannedData = {
           glycemic_index: parsedData.glycemic_index,
           glycemic_load: parsedData.glycemic_load
-        });
-        // Clear the saved data after loading
+        };
+        setScannedGlycemic(scannedData);
         await AsyncStorage.removeItem('scannedFoodData');
+        return scannedData;
       }
+      return null;
     } catch (error) {
       console.error('Error loading scanned food data:', error);
+      return null;
+    }
+  };
+
+  const getRecommendation = async (todayGlycemic, scannedGlycemic) => {
+    try {
+      console.log('Sending recommendation request with:', {
+        today_glycemic: todayGlycemic,
+        scanned_glycemic: scannedGlycemic
+      });
+
+      const token = await AsyncStorage.getItem('userToken');
+      const response = await fetch(endpoints.getRecommendation, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          today_glycemic: todayGlycemic,
+          scanned_glycemic: scannedGlycemic
+        }),
+      });
+
+      console.log('Recommendation response status:', response.status);
+      const data = await response.json();
+      console.log('Recommendation response data:', data);
+
+      if (!response.ok) throw new Error(data.error || 'Failed to get recommendation');
+      
+      if (data && data.recommendation) {
+        setRecommendation(data.recommendation);
+        setError(null);
+      } else {
+        throw new Error('No recommendation received from server');
+      }
+    } catch (error) {
+      console.error('Error getting recommendation:', error);
+      setError('Failed to get recommendation');
+      setRecommendation('Unable to generate recommendation at this time.');
     }
   };
 
