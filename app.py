@@ -56,8 +56,8 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Load models
 yolo_model = YOLO('./assets/models/yolo_model.pt')
-rf_model = joblib.load('./assets/models/random_forest_model.joblib')
-scaler = joblib.load('./assets/models/scaler.joblib')
+rf_model = joblib.load('./assets/models/xgboost.joblib')
+scaler = joblib.load('./assets/models/scaler_aarog.joblib')
 
 # Configure Gemini
 generation_config = {
@@ -196,7 +196,7 @@ def calculate_glycemic_data(nutrition_data):
     )
 
     recommendation_response = requests.post(
-        "https://92a8-34-75-161-73.ngrok-free.app/generate",
+        "https://8d54-34-173-81-113.ngrok-free.app/generate",
         json={"prompt": prompt, "max_length": 100}
     )
     Db_response = recommendation_response.json().get('response', 'No recommendation available')
@@ -1124,10 +1124,10 @@ def get_recommendation():
 
         # Make request to the ML model
         response = requests.post(
-            "https://589e-34-168-31-63.ngrok-free.app/generate",
+            "https://8d54-34-173-81-113.ngrok-free.app/generate",
             json={
                 "prompt": prompt,
-                "max_length": 150  # Reduced max length for more concise responses
+                "max_length": 150
             }
         )
 
@@ -1135,9 +1135,25 @@ def get_recommendation():
             return jsonify({"error": "Failed to generate recommendation"}), 500
 
         recommendation_data = response.json()
-        
+        recommendation_text = recommendation_data.get('response', '')
+
+        # Store recommendation in database with correct fields
+        recommendation_entry = {
+            "user_id": user.id,
+            "recommendation_text": recommendation_text  # Changed from 'recommendation' to 'recommendation_text'
+        }
+
+        # Insert into recommendations table
+        stored_recommendation = supabase.table('recommendations')\
+            .insert(recommendation_entry)\
+            .execute()
+
+        if not stored_recommendation.data:
+            return jsonify({"error": "Failed to store recommendation"}), 500
+
         return jsonify({
-            "recommendation": recommendation_data.get('response', '')
+            "recommendation": recommendation_text,
+            "recommendation_id": stored_recommendation.data[0]['id']
         }), 200
 
     except Exception as e:
