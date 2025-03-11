@@ -10,6 +10,8 @@ node_modules/
 dist/
 web-build/
 expo-env.d.ts
+
+# Mobile builds
 *.jks
 *.p8
 *.p12
@@ -24,6 +26,24 @@ expo-env.d.ts
 /coverage
 __tests__/coverage/
 
+# Debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.metro-health-check*
+
+# TypeScript
+*.tsbuildinfo
+*.d.ts
+
+# Environment Variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+!.env.example
+
 # Production
 /build
 /dist
@@ -31,11 +51,6 @@ web-build/
 
 # Development
 .DS_Store
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 *.log
 .vscode/
 .idea/
@@ -44,12 +59,6 @@ web-build/
 *.njsproj
 *.sln
 *.sw?
-
-# Debug files
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-.metro-health-check*
 
 # Python
 __pycache__/
@@ -60,7 +69,6 @@ __pycache__/
 venv/
 ENV/
 env/
-.env
 .venv
 *.pyc
 
@@ -80,10 +88,6 @@ Thumbs.db
 logs/
 *.sqlite
 *.db
-
-# TypeScript
-*.tsbuildinfo
-*.d.ts
 
 # Android/IntelliJ
 .idea
