@@ -72,7 +72,6 @@ env/
 # Data and logs
 *.log
 logs/
-data/
 *.sqlite
 *.db
 
