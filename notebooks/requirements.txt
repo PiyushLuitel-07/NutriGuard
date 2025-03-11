@@ -1,0 +1,26 @@
+# Core ML/DL Libraries
+torch             # Deep learning framework
+ultralytics>=8.0.0  # YOLO implementation
+transformers      # For Diabetica model
+
+# Data Processing
+numpy>=1.22.0     # Array operations
+pandas            # Data manipulation
+Pillow>=9.0.0    # Image processing
+scikit-learn      # Machine learning utilities
+
+# Model Serving
+fastapi           # API framework
+uvicorn           # ASGI server
+pyngrok           # Ngrok integration
+nest-asyncio      # Async support in Jupyter
+
+# Model Training
+xgboost          # XGBoost implementation
+joblib           # Model saving/loading
+
+# Visualization
+matplotlib       # Plotting library
+seaborn         # Statistical visualization
+
+# Note: os and shutil are part of Python standard library
