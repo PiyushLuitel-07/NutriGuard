@@ -1,5 +1,5 @@
 # ML Models
-xgboost.joblib filter=lfs diff=lfs merge=lfs -text
-random_forest_model.joblib filter=lfs diff=lfs merge=lfs -text
-yolo_model.pt filter=lfs diff=lfs merge=lfs -text
-scaler.joblib filter=lfs diff=lfs merge=lfs -text
+app/assets/models/xgboost.joblib filter=lfs diff=lfs merge=lfs -text
+app/assets/models/random_forest_model.joblib filter=lfs diff=lfs merge=lfs -text
+app/assets/models/yolo_model.pt filter=lfs diff=lfs merge=lfs -text
+app/assets/models/scaler.joblib filter=lfs diff=lfs merge=lfs -text
