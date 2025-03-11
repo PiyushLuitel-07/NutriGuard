@@ -8,6 +8,12 @@ NutriGuard is a mobile application designed to assist individuals with diabetes 
 - **Diabetica Model** for personalized recommendations
 - **Gemini AI** for nutritional label data extraction
 
+## Contributors
+- [Aarogya Bhandari](https://github.com/amewzzz)
+- [Aayush Pokharel](https://github.com/aayushpkrl)
+- [Piyush Luitel](https://github.com/PiyushLuitel-07)
+- [Prashant Bhusal](https://github.com/prashant72-git)
+
 ## Application Screenshots
 
 | Login/Register | Dashboard | Meal Logging |
@@ -32,23 +38,49 @@ Watch our application demo: [NutriGuard Demo Video](https://youtu.be/lKITzzyZT6U
 ## Prerequisites
 - Node.js (v16 or higher)
 - Expo CLI (`npm install -g expo-cli`)
+- Git LFS (for downloading model files)
+- Python 3.8+
 - Android Studio (for Android development)
 - Xcode (for iOS development, Mac only)
 
 ## Project Setup
 
-1. Clone the repository:
+1. Install Git LFS:
 ```bash
-git clone <repository-url>
-cd nutriguard/app
+git lfs install
 ```
 
-2. Install dependencies:
+2. Clone the repository with models:
 ```bash
+# Clone repository
+git clone https://github.com/amewzzz/NutriGuard.git
+cd NutriGuard
+
+# Pull LFS files (models)
+git lfs pull
+
+# Verify models in app/assets/models/
+dir app\assets\models
+# Should show:
+# - xgboost.joblib
+# - random_forest_model.joblib
+# - yolo_model.pt
+# - scaler.joblib
+```
+
+3. Install dependencies:
+```bash
+# Navigate to app directory
+cd app
+
+# Install Node.js dependencies
 npm install
+
+# Install Python dependencies
+pip install -r requirements.txt
 ```
 
-3. Create `.env` file:
+4. Create `.env` file:
 ```bash
 cp .env.example .env
 ```
