@@ -12,11 +12,11 @@ NutriGuard is a mobile application designed to assist individuals with diabetes 
 
 | Login/Register | Dashboard | Meal Logging |
 |:---:|:---:|:---:|
-| ![Login Page](demo/1.%20loginregister_page.png) | ![Dashboard](demo/6.%20dashboard.png) | ![Meal Logging](demo/4.%20meal_logging.png) |
+| ![Login Page](demo/1. loginregister_page.png) | ![Dashboard](demo/6. dashboard.png) | ![Meal Logging](4. demo/meal_logging.png) |
 
 | Profile | Nutritional Info | Recommendations |
 |:---:|:---:|:---:|
-| ![User Profile](demo/7.%20user_profile.png) | ![Nutritional Info](demo/8.%20nutritional_info_edit_page.png) | ![Recommendations](demo/10.%20recommendation_page.png) |
+| ![User Profile](demo/7. user_profile.png) | ![Nutritional Info](demo/8. nutritional_info_edit_page.png) | ![Recommendations](demo/10. recommendation_page.png) |
 
 ## Demo Video
 Watch our application demo: [NutriGuard Demo Video](https://youtu.be/lKITzzyZT6U)
@@ -229,4 +229,24 @@ cd android
    - Restart development server
    - Check `.env` file exists in root directory
 
+## Support
 
+- GitHub Issues: [Project Issues](your-issues-link)
+- Email: support@nutriguard.com
+- Discord: [Community Channel](your-discord-link)
+
+## Development Notes
+
+- Uses Expo Router for navigation
+- Implements file-based routing
+- Uses Supabase for backend and authentication
+- Implements real-time data sync
+- Uses ML models for food recognition
+
+## Contributing
+
+Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting PRs.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
