@@ -1,12 +1,12 @@
-# NutriGuard - AI-Enhanced Nutritional Label Scanner and Diabetic Health Assessment
+# NutriGuard - Nutritional Label Scanner and Diabetic Health Assessment
 
 ## Project Overview
-NutriGuard is a mobile application designed to assist individuals with diabetes in managing their dietary choices effectively. The app combines advanced AI technologies to provide personalized nutritional recommendations:
+NutriGuard is a mobile application designed to assist individuals with diabetes in managing their dietary choices effectively. The app combines multiple technologies to provide personalized nutritional recommendations:
 
-- **YOLO Label Detection** (mAP50: 0.9, mAP50-95: 0.78)
+- **Nutritional Label Detection** (mAP50: 0.9, mAP50-95: 0.78)
 - **Glycemic Index Predictor** (MSE: 40.46, R² score: 0.94)
-- **Diabetica Model** for personalized recommendations
-- **Gemini AI** for nutritional label data extraction
+- **Dietary Recommendation Model** for personalized suggestions
+- **Gemini API** for nutritional label data extraction
 
 ## Contributors
 - [Aarogya Bhandari](https://github.com/amewzzz)
@@ -31,7 +31,7 @@ Watch our application demo: [NutriGuard Demo Video](https://youtu.be/lKITzzyZT6U
 - Real-time nutritional label scanning and analysis
 - Personalized glycemic load calculation
 - User-specific health profile management
-- AI-powered dietary recommendations
+- Personalized dietary recommendations
 - Blood sugar level tracking
 - Meal history logging
 
@@ -64,7 +64,7 @@ dir app\assets\models
 # Should show:
 # - xgboost.joblib
 # - random_forest_model.joblib
-# - yolo_model.pt
+# - detection_model.pt
 # - scaler.joblib
 ```
 
@@ -201,14 +201,14 @@ ngrok http 5000
 const NGROK_URL = process.env.NGROK_URL || 'your-ngrok-url';
 ```
 
-### 2. Run Diabetica Model
-1. Open [`notebooks/diabetica_inference.ipynb`](notebooks/diabetica_inference.ipynb) in Kaggle/Google Colab
+### 2. Run Recommendation Model
+1. Open [`notebooks/recommendation_inference.ipynb`](notebooks/recommendation_inference.ipynb) in Kaggle/Google Colab
 2. Run all cells in the notebook
 3. Copy the generated Ngrok URL
 4. Update in [`app/app.py`](app/app.py):
 ```python
 recommendation_response = requests.post(
-    "your-diabetica-ngrok-url/generate",
+    "your-recommendation-ngrok-url/generate",
     json={"prompt": prompt, "max_length": 100}
 )
 ```
@@ -237,7 +237,7 @@ npx expo start
 nutriguard/
 ├── app/                 # React Native mobile app
 └── notebooks/          # Machine learning notebooks
-    └── diabetica_inference.ipynb  # Diabetica model inference
+    └── recommendation_inference.ipynb  # Recommendation model inference
 ```
 
 Note: Keep all command prompts running while using the app.
@@ -260,5 +260,3 @@ cd android
 3. Environment variables not loading:
    - Restart development server
    - Check `.env` file exists in root directory
-
-
